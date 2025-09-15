@@ -9,8 +9,11 @@ let maxFrames = 60; // 10 seconds at 60 FPS
 
 let resolution =70; // Sphere detail (lat/lon divisions)
 function preload() {
-  audio = loadSound('probe.mp3');
-}
+
+  document.addEventListener("click", () => {
+    const audio = new Audio("entwarnung.mp3");
+    audio.play();
+});}
 
 function setup() {
   const canvas = createCanvas(950, 950, WEBGL);
