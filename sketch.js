@@ -11,7 +11,7 @@ let resolution =70; // Sphere detail (lat/lon divisions)
 function preload() {
 
   document.addEventListener("click", () => {
-    const audio = new Audio("warnung1.mp3");
+    const audio = new Audio("entwarnung.mp3");
     audio.play();
 });}
 
