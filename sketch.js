@@ -1,93 +1,98 @@
 let audio;
-let amp;
 let fft;
 
+let resolution = 120;
 
-let capturer;
-let recording = false;
-let maxFrames = 60; // 10 seconds at 60 FPS
-
-let resolution =70; // Sphere detail (lat/lon divisions)
 function preload() {
-  audio = loadSound('probe.mp3');
+  audio = loadSound('probe.mp3'); 
 }
 
 function setup() {
   const canvas = createCanvas(950, 950, WEBGL);
-  canvas.id('p5canvas'); 
+  canvas.id('p5canvas');
+
   const plane = document.querySelector('#p5-plane');
   if (plane) {
-  plane.setAttribute('material', 'shader: flat; src: #p5canvas; transparent: true');
-}
-  
-  angleMode(RADIANS);
-  noStroke();
-  
+    plane.setAttribute(
+      'material',
+      'shader: flat; src: #p5canvas; transparent: true'
+    );
+  }
 
+  angleMode(RADIANS);
+  frameRate(60);
+
+  stroke(0);
+  strokeWeight(1.5);
+  noFill();
 
   fft = new p5.FFT();
   fft.setInput(audio);
 
   audio.loop();
-  frameRate(60);
 }
-
 
 function draw() {
-  
-  // Make sure to update the texture in A-Frame every frame
-const canvas = document.getElementById('p5canvas');
-if (canvas) {
-  // Get the A-Frame plane material and mark texture for update
-  const plane = document.querySelector('#p5-plane');
-  if (plane && plane.object3D && plane.object3D.children.length > 0) {
-    const mesh = plane.object3D.children[0];
-    if (mesh.material.map) {
-      mesh.material.map.needsUpdate = true;
+  // --- keep A-Frame texture updating ---
+  const canvas = document.getElementById('p5canvas');
+  if (canvas) {
+    const plane = document.querySelector('#p5-plane');
+    if (plane && plane.object3D && plane.object3D.children.length > 0) {
+      const mesh = plane.object3D.children[0];
+      if (mesh.material.map) {
+        mesh.material.map.needsUpdate = true;
+      }
     }
   }
-}
 
-
+  // --- translucent fade (same feel as vortex sketch) ---
+  noStroke();
   fill(255, 10);
-  // background(255, 0.5);
-  rect(-width/2, -height/2, width, height);
+  rect(-width / 2, -height / 2, width, height);
 
-  rotateY(frameCount * 0.01); // Spin the globe
-  rotateX(PI / 10); // Tilt for better view
+  // --- vortex rotation ---
+  rotateZ(frameCount * 0.003);
 
   let spectrum = fft.analyze();
-  let waveform = fft.waveform();
 
-  let baseRadius = 200;
+  stroke(0);
+  strokeWeight(1.5);
+  noFill();
 
-  // Draw frequency-reactive particles on globe
-  fill(0);
-  for (let lat = 1; lat < resolution; lat++) {
-    let theta = map(lat, 0, resolution, -HALF_PI, HALF_PI);
-    for (let lon = 1; lon < resolution * 2; lon++) {
-      let phi = map(lon, 0, resolution * 2, 0, TWO_PI);
-      let idx = (lat * resolution + lon) % spectrum.length;
+  beginShape(POINTS);
+
+  for (let r = 5; r < resolution; r++) {
+    let radius = r * 3.2;
+
+    for (let a = 0; a < 360; a += 1) {
+      let angle = radians(a);
+
+      let idx = r % spectrum.length;
       let ampVal = spectrum[idx];
 
-      
-      let droop = map(ampVal, 0, 1000, 10, 80);
-      let r = baseRadius + map(ampVal, 10, 340, 10, 350);
-      let x = r * cos(theta) * cos(phi);
-      let y = r * sin(theta) + droop;
-      let z = r * cos(theta) * sin(phi);
+      // audio-based outward push
+      let audioWarp = map(ampVal, 0, 255, 0, 180);
 
-      let alpha = map(droop, 0, 80, 255, 200);
-      fill(255);
+      // 3D noise warp
+      let n = noise(
+        r * 0.03,
+        a * 0.01,
+        frameCount * 0.01
+      );
+      let noiseWarp = map(n, 0, 1, -90, 500);
 
-      push();
-      translate(x, y, z);
-      sphere(1.2); // small reactive dot
-      pop();
+      // spiral twist
+      let twist = noise(r * 0.02, frameCount * 0.01) * 2.5;
+
+      let finalR = radius + noiseWarp + audioWarp;
+
+      let x = finalR * cos(angle + twist);
+      let y = finalR * sin(angle + twist);
+      let z = noiseWarp * 1.2;
+
+      vertex(x, y, z);
     }
   }
 
-
-
-
+  endShape();
 }
